@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linkex — Digital Prototype</title>
+<style>
+  :root{
+    --bg:#0b1408; --glowbg:#2c4a14; --panel:#13200e; --panel2:#0e1a0a; --line:#2c4220;
+    --text:#e4eeda; --dim:#9ab38a; --accent:#b8e986; --glow:#d6f55a;
+    --danger:#e05548;
+    --btnbg:#23401a; --btnline:#4a6e36; --btnhov:#2c4f21; --btnpri:#3c6e1f; --btnpriline:#6da13f;
+    --p1:#8ecbff; --p2:#ffb38e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:"Space Grotesk","Segoe UI",system-ui,sans-serif;
+    background:
+      radial-gradient(900px 400px at 50% -5%, var(--glowbg) 0%, transparent 60%),
+      radial-gradient(900px 400px at 50% 105%, var(--glowbg) 0%, transparent 60%),
+      var(--bg);
+    color:var(--text); min-height:100vh; padding:16px;
+  }
+  header{max-width:1100px;margin:0 auto 12px auto;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;}
+  h1{font-size:26px;letter-spacing:.05em;}
+  h1 span{color:var(--glow);}
+  .sub{color:var(--dim);font-size:13px;}
+  .layout{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start;}
+  @media(max-width:920px){.layout{grid-template-columns:1fr;}}
+  .boardwrap{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;position:relative;}
+  svg{display:block;width:100%;height:auto;}
+  .panel{display:flex;flex-direction:column;gap:12px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;}
+  .card h2{font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:var(--dim);margin-bottom:8px;}
+  .turnbig{font-size:17px;font-weight:700;}
+  .turnbig .p1{color:var(--p1);} .turnbig .p2{color:var(--p2);}
+  .msg{font-size:13.5px;line-height:1.5;color:var(--text);margin-top:6px;}
+  .msg b{color:var(--accent);}
+  button{font:inherit;font-size:13px;font-weight:600;background:var(--btnbg);color:var(--text);
+    border:1px solid var(--btnline);border-radius:8px;padding:7px 13px;cursor:pointer;}
+  button:hover{background:var(--btnhov);}
+  button:disabled{opacity:.35;cursor:not-allowed;}
+  button.primary{background:var(--btnpri);border-color:var(--btnpriline);}
+  button.warn{background:#5e2620;border-color:#9c4a3f;color:#fff;}
+  select{font:inherit;font-size:13px;background:var(--panel2);color:var(--text);
+    border:1px solid var(--line);border-radius:6px;padding:5px 7px;}
+  .setrow{display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--dim);}
+  .setrow label{display:flex;gap:6px;align-items:center;}
+  .supplyrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .chip{
+    position:relative;width:46px;height:46px;border-radius:50%;border:2.5px solid #0008;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+    font-weight:700;color:#fff;text-shadow:0 1px 2px #000c;font-size:15px;padding:0;
+  }
+  .chip:disabled{opacity:.35;}
+  .chip .ct{position:absolute;bottom:-6px;right:-6px;background:#000c;border:1px solid #fff4;
+    border-radius:10px;font-size:11px;padding:1px 6px;}
+  .chip.blockedmark::after{content:"⛔";position:absolute;top:-8px;left:-8px;font-size:16px;}
+  .seltray{display:flex;gap:8px;min-height:52px;align-items:center;flex-wrap:wrap;}
+  .seltray .chip{width:40px;height:40px;}
+  .pillrow{display:flex;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--dim);margin-top:6px;}
+  .pill{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:4px 9px;}
+  .pill b{color:var(--text);}
+  .log{max-height:200px;overflow-y:auto;font-size:12px;line-height:1.55;display:flex;flex-direction:column-reverse;}
+  .log p{margin-bottom:3px;color:var(--dim);}
+  .log p.hl{color:var(--accent);font-weight:600;margin-top:4px;}
+  .log p.warn{color:var(--danger);font-weight:600;}
+  .log .sw{display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 3px -1px 1px;border:1px solid #0008;}
+  .replist{display:flex;flex-direction:column;gap:8px;}
+  .repitem{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;}
+  .repitem .chip{width:30px;height:30px;font-size:11px;}
+  .breakdown{font-size:13px;line-height:1.65;}
+  .breakdown h3{font-size:13px;margin:8px 0 3px 0;}
+  .breakdown .mult{color:var(--glow);font-weight:700;}
+  .winner{font-size:18px;font-weight:700;color:var(--glow);margin-top:8px;}
+  .hidden{display:none !important;}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>LINK<span>EX</span></h1>
+  <span class="sub">2-player hotseat prototype · build chains of 4+ · longest chain per group · match lengths for multipliers</span>
+</header>
+
+<div class="layout">
+  <div class="boardwrap">
+    <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+
+  <div class="panel">
+    <div class="card">
+      <div class="turnbig" id="turnShow"></div>
+      <div class="msg" id="msg"></div>
+      <div class="pillrow" id="statusPills"></div>
+    </div>
+
+    <div class="card" id="supplyCard">
+      <h2>Supply — click to select</h2>
+      <div class="supplyrow" id="supplyRow"></div>
+      <h2 style="margin-top:12px;">Your selection</h2>
+      <div class="seltray" id="selTray"></div>
+      <div class="btnrow">
+        <button class="primary" id="confirmSel">Confirm selection</button>
+      </div>
+    </div>
+
+    <div class="card hidden" id="replaceCard">
+      <h2>Replace wild discs</h2>
+      <div class="replist" id="repList"></div>
+    </div>
+
+    <div class="card">
+      <div class="setrow">
+        <label>Supply/color
+          <select id="supplySel">
+            <option value="20">20</option>
+            <option value="21">21</option><option value="22">22</option>
+            <option value="23">23</option><option value="24">24</option>
+            <option value="25">25</option>
+          </select>
+        </label>
+        <label>Theme
+          <select id="themeSel"></select>
+        </label>
+      </div>
+      <div class="btnrow">
+        <button id="resetTurn">Reset turn</button>
+        <button id="previewScore">Preview scoring</button>
+        <button class="primary hidden" id="endTurnBtn">End turn</button>
+        <button class="warn" id="newGameBtn">New game</button>
+      </div>
+    </div>
+
+    <div class="card hidden" id="scoreCard">
+      <h2>Scoring</h2>
+      <div class="breakdown" id="breakdown"></div>
+    </div>
+
+    <div class="card">
+      <h2>Log</h2>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   LINKEX ENGINE — pure logic (no DOM) so it can be unit-tested headless
+   Board: per side, 6 rows, row 0 (gray) has 7 hexes, +1 per row → 12.
+   Cell key "r,i". Axial dirs for turn-constraint math.
+===================================================================== */
+const Engine = (() => {
+  const ROWS = 6, BASE = 7;
+  const width = r => BASE + r;
+  const inBounds = (r,i) => r>=0 && r<ROWS && i>=0 && i<width(r);
+  // neighbor offsets with direction index in cyclic 60° order:
+  // E=0, SE=1, SW=2, W=3, NW=4, NE=5
+  function nbrsWithDir(r,i){
+    const out = [];
+    const cand = [
+      [r, i+1, 0],   // E
+      [r+1, i+1, 1], // SE
+      [r+1, i, 2],   // SW
+      [r, i-1, 3],   // W
+      [r-1, i-1, 4], // NW
+      [r-1, i, 5],   // NE
+    ];
+    for(const [rr,ii,d] of cand) if(inBounds(rr,ii)) out.push([rr+","+ii, d]);
+    return out;
+  }
+  const turnOK = (a,b) => { const d=(b-a+6)%6; return d===0||d===1||d===5; };
+
+  // longest turn-constrained simple path within a same-color component
+  function longestPath(compSet){
+    let best = [];
+    function dfs(key, visited, lastDir, path){
+      if(path.length > best.length) best = path.slice();
+      const [r,i] = key.split(",").map(Number);
+      for(const [nk, dir] of nbrsWithDir(r,i)){
+        if(!compSet.has(nk) || visited.has(nk)) continue;
+        if(lastDir !== null && !turnOK(lastDir, dir)) continue;
+        visited.add(nk); path.push(nk);
+        dfs(nk, visited, dir, path);
+        visited.delete(nk); path.pop();
+      }
+    }
+    for(const k of compSet) dfs(k, new Set([k]), null, [k]);
+    return best;
+  }
+
+  // chains for one side: cells = { "r,i": colorKey }
+  function findChains(cells){
+    const byColor = {};
+    for(const [k,c] of Object.entries(cells)){
+      if(!byColor[c]) byColor[c] = new Set();
+      byColor[c].add(k);
+    }
+    const chains = [];
+    for(const [color,set] of Object.entries(byColor)){
+      const seen = new Set();
+      for(const start of set){
+        if(seen.has(start)) continue;
+        const comp = new Set([start]); seen.add(start);
+        const q = [start];
+        while(q.length){
+          const cur = q.pop();
+          const [r,i] = cur.split(",").map(Number);
+          for(const [nk] of nbrsWithDir(r,i)){
+            if(set.has(nk) && !seen.has(nk)){ seen.add(nk); comp.add(nk); q.push(nk); }
+          }
+        }
+        const path = longestPath(comp);
+        if(path.length >= 4) chains.push({color, len:path.length, path});
+      }
+    }
+    return chains;
+  }
+
+  // optimal multiplier partition: per length, conjugate-partition the color counts
+  function partitionScore(chains){
+    const byLen = {};
+    chains.forEach((c,idx)=>{ (byLen[c.len] = byLen[c.len]||[]).push(idx); });
+    let total = 0; const sets = [];
+    for(const len of Object.keys(byLen).map(Number).sort((a,b)=>b-a)){
+      const byColor = {};
+      for(const idx of byLen[len]){
+        const col = chains[idx].color;
+        (byColor[col] = byColor[col]||[]).push(idx);
+      }
+      const m = Math.max(...Object.values(byColor).map(a=>a.length));
+      for(let j=0;j<m;j++){
+        const members = [];
+        for(const col of Object.keys(byColor)) if(byColor[col].length > j) members.push(byColor[col][j]);
+        const k = members.length;
+        const pts = len * k * k;
+        total += pts;
+        sets.push({len, members, k, points:pts});
+      }
+    }
+    return {total, sets};
+  }
+
+  function scoreSide(cells){
+    const chains = findChains(cells);
+    const {total, sets} = partitionScore(chains);
+    return {chains, total, sets};
+  }
+
+  return { ROWS, BASE, width, inBounds, nbrsWithDir, turnOK, longestPath, findChains, partitionScore, scoreSide };
+})();
+
+/* ===================== GAME STATE & UI ===================== */
+const COLORS = [
+  {k:"B", name:"Blue",   hex:"#3a66e0"},
+  {k:"G", name:"Green",  hex:"#46b035"},
+  {k:"Y", name:"Yellow", hex:"#e3cf3e"},
+  {k:"O", name:"Orange", hex:"#ec8b25"},
+  {k:"P", name:"Purple", hex:"#9340d4"},
+];
+const CMAP = Object.fromEntries(COLORS.map(c=>[c.k,c]));
+CMAP.W = {k:"W", name:"Wild", hex:"#f2f2f2"};
+const SUPPLY_DEFAULT = 17;
+const PNAME = ["Player 1","Player 2"];
+const PCLS = ["p1","p2"];
+
+/* ----- themes: complementary palettes, ordered darkest → lightest ----- */
+const THEMES = [
+  {name:"Forest Night (darkest)",
+   vars:{bg:"#0b1408",glowbg:"#2c4a14",panel:"#13200e",panel2:"#0e1a0a",line:"#2c4220",
+         text:"#e4eeda",dim:"#9ab38a",accent:"#b8e986",glow:"#d6f55a",danger:"#e05548",
+         btnbg:"#23401a",btnline:"#4a6e36",btnhov:"#2c4f21",btnpri:"#3c6e1f",btnpriline:"#6da13f",
+         p1:"#8ecbff",p2:"#ffb38e"},
+   board:{empty:"#1d1d1d",gray:"#5a5a5a",filled:"#161616",stroke:"#3a3a3a",legal:"#b8e986",
+          divider:"#d6f55a",path:"#ffffff",discEdge:"#000a"}},
+  {name:"Midnight Ember",
+   vars:{bg:"#0d1322",glowbg:"#2a3a66",panel:"#151d33",panel2:"#101728",line:"#2c3a63",
+         text:"#e6ebf7",dim:"#94a3c7",accent:"#f0a843",glow:"#ffcf6b",danger:"#e05548",
+         btnbg:"#21304f",btnline:"#41557f",btnhov:"#293a5e",btnpri:"#8a5a1d",btnpriline:"#c08a3e",
+         p1:"#7fb8ff",p2:"#ffb070"},
+   board:{empty:"#1a2030",gray:"#56607a",filled:"#141926",stroke:"#37425f",legal:"#f0a843",
+          divider:"#ffcf6b",path:"#ffffff",discEdge:"#000a"}},
+  {name:"Plum & Gold",
+   vars:{bg:"#221530",glowbg:"#4a2c66",panel:"#2d1d40",panel2:"#261837",line:"#4a3366",
+         text:"#f0e8f7",dim:"#b39cc9",accent:"#e8c252",glow:"#f5d97a",danger:"#e05548",
+         btnbg:"#3d2a54",btnline:"#624782",btnhov:"#4a3366",btnpri:"#8a6f1f",btnpriline:"#c2a347",
+         p1:"#8fd0ff",p2:"#ffb585"},
+   board:{empty:"#2a1f38",gray:"#6a5e7a",filled:"#231a30",stroke:"#4d3d63",legal:"#e8c252",
+          divider:"#f5d97a",path:"#ffffff",discEdge:"#000a"}},
+  {name:"Coastal Slate",
+   vars:{bg:"#3b4856",glowbg:"#5b7287",panel:"#46545f",panel2:"#3f4c58",line:"#5d6e7d",
+         text:"#f0f5f9",dim:"#b9c7d2",accent:"#ff8a70",glow:"#ffab92",danger:"#ffd2c7",
+         btnbg:"#54646f",btnline:"#75899a",btnhov:"#5e707c",btnpri:"#b35a40",btnpriline:"#d98166",
+         p1:"#a8d8ff",p2:"#ffc4a3"},
+   board:{empty:"#2f3a45",gray:"#8a96a1",filled:"#28323c",stroke:"#54646f",legal:"#ff8a70",
+          divider:"#ffab92",path:"#ffffff",discEdge:"#0008"}},
+  {name:"Paper & Teal (lightest)",
+   vars:{bg:"#f1ead9",glowbg:"#cfe8e0",panel:"#faf5e8",panel2:"#f3ecdc",line:"#d4c9af",
+         text:"#2e2a22",dim:"#7a7260",accent:"#1f8a8a",glow:"#159e93",danger:"#c0392b",
+         btnbg:"#e6dcc4",btnline:"#c4b693",btnhov:"#ded2b5",btnpri:"#1f8a8a",btnpriline:"#3aa8a4",
+         p1:"#1f6fb3",p2:"#c95f2a"},
+   board:{empty:"#e2d9c4",gray:"#aaa28e",filled:"#d3c8ac",stroke:"#b3a888",legal:"#1f8a8a",
+          divider:"#159e93",path:"#333333",discEdge:"#0006"}},
+];
+let themeIdx = 0;
+let T = THEMES[0].board;
+function applyTheme(idx){
+  themeIdx = idx;
+  T = THEMES[idx].board;
+  const root = document.documentElement.style;
+  for(const [k,v] of Object.entries(THEMES[idx].vars)) root.setProperty("--"+k, v);
+  if(G) render();
+}
+
+let G = null, snapshot = null, previewOn = false;
+
+function newGame(){
+  const per = +document.getElementById("supplySel").value || SUPPLY_DEFAULT;
+  G = {
+    current: 0,
+    supplyPer: per,
+    supply: Object.fromEntries(COLORS.map(c=>[c.k, per])),
+    wilds: [3,3],
+    wildLock: [false,false],
+    blocked: null,
+    cells: [ {}, {} ],
+    phase: "select",          // select | place | replace | over
+    selection: [],            // array of color keys or "W"
+    placed: [],               // {side,key,disc,replacedWith?}
+    turnNumber: 1,
+    final: null,
+  };
+  previewOn = false;
+  document.getElementById("log").innerHTML = "";
+  log("New game. "+PNAME[0]+" starts. Fill your gray row first.", "hl");
+  takeSnapshot();
+  render();
+}
+
+function takeSnapshot(){
+  snapshot = JSON.parse(JSON.stringify({
+    supply:G.supply, wilds:G.wilds, wildLock:G.wildLock, blocked:G.blocked,
+    cells:G.cells, current:G.current, turnNumber:G.turnNumber
+  }));
+}
+function resetTurn(){
+  if(G.phase === "over") return;
+  Object.assign(G, JSON.parse(JSON.stringify(snapshot)));
+  G.phase = "select"; G.selection = []; G.placed = []; G.final = null;
+  log("Turn reset.", "warn");
+  render();
+}
+
+/* ---------- selection ---------- */
+function clickSupply(k){
+  if(G.phase !== "select") return;
+  if(G.selection.length >= 3) return;
+  if(k === "W"){
+    const used = G.selection.filter(x=>x==="W").length;
+    if(G.wildLock[G.current]) return;
+    if(used >= G.wilds[G.current]) return;
+    G.selection.push("W");
+  } else {
+    if(G.blocked === k) return;
+    if(G.supply[k] <= 0) return;
+    if(G.selection.includes(k)) return;      // colors must be different
+    G.selection.push(k);
+  }
+  render();
+}
+function unselect(idx){
+  if(G.phase !== "select") return;
+  G.selection.splice(idx,1);
+  render();
+}
+function confirmSelection(){
+  if(G.phase !== "select" || G.selection.length !== 3) return;
+  // pay costs now
+  for(const k of G.selection){
+    if(k === "W") G.wilds[G.current]--;
+    else G.supply[k]--;
+  }
+  G.phase = "place";
+  log(PNAME[G.current]+" selected "+G.selection.map(k=>sw(k)+CMAP[k].name).join(", ")+".");
+  render();
+}
+
+/* ---------- placement ---------- */
+function ownPlacedCount(){ return G.placed.filter(p=>p.side===G.current).length; }
+function oppPlacedCount(){ return G.placed.filter(p=>p.side!==G.current).length; }
+function grayHasSpace(side){
+  for(let i=0;i<Engine.width(0);i++) if(!G.cells[side]["0,"+i]) return true;
+  return false;
+}
+function isLegalCell(side, key){
+  if(G.cells[side][key]) return false;
+  const quotaOK = side===G.current ? ownPlacedCount()<2 : oppPlacedCount()<1;
+  if(!quotaOK) return false;
+  const [r] = key.split(",").map(Number);
+  if(grayHasSpace(side)) return r === 0;
+  if(side === G.current){
+    const [rr,ii] = key.split(",").map(Number);
+    return Engine.nbrsWithDir(rr,ii).some(([nk])=>G.cells[side][nk]);
+  }
+  return true; // opponent side, gray full: anywhere empty
+}
+let activeDisc = 0; // index into selection of the disc being placed
+function clickCell(side, key){
+  if(G.phase !== "place") return;
+  const remaining = G.selection.length;
+  if(remaining === 0) return;
+  if(!isLegalCell(side, key)) return;
+  const disc = G.selection[activeDisc] !== undefined ? G.selection.splice(activeDisc,1)[0] : G.selection.shift();
+  G.cells[side][key] = disc;
+  G.placed.push({side, key, disc});
+  activeDisc = 0;
+  log(PNAME[G.current]+" placed "+sw(disc)+CMAP[disc].name+" on "+(side===G.current?"their own":"the opponent's")+" side.");
+  if(G.selection.length === 0){
+    const wilds = G.placed.filter(p=>p.disc==="W");
+    G.phase = "replace"; // even if no wilds; the End-turn button shows
+    if(wilds.length) log("Replace your wild disc"+(wilds.length>1?"s":"")+" before ending the turn.");
+  }
+  render();
+}
+
+/* ---------- wild replacement & end of turn ---------- */
+function chooseReplacement(pIdx, colorK){
+  const p = G.placed[pIdx];
+  if(!p || p.disc !== "W") return;
+  if(p.replacedWith){ G.supply[p.replacedWith]++; }     // undo previous pick
+  if(G.supply[colorK] <= 0) return;
+  G.supply[colorK]--;
+  p.replacedWith = colorK;
+  G.cells[p.side][p.key] = colorK;
+  render();
+}
+function allWildsReplaced(){
+  return G.placed.filter(p=>p.disc==="W").every(p=>p.replacedWith);
+}
+function endTurn(){
+  if(G.phase !== "replace" || !allWildsReplaced()) return;
+  const opp = 1 - G.current;
+  const oppPlay = G.placed.find(p=>p.side===opp);
+  if(oppPlay.disc === "W"){
+    G.blocked = null;
+    G.wildLock[opp] = true;
+    log("Wild placed on "+PNAME[opp]+"'s side — no color is blocked, and "+PNAME[opp]+" cannot play wilds next turn.","hl");
+  } else {
+    G.blocked = oppPlay.disc;
+    G.wildLock[opp] = false;
+    log(sw(oppPlay.disc)+CMAP[oppPlay.disc].name+" is now blocked for "+PNAME[opp]+".","hl");
+  }
+  for(const p of G.placed.filter(p=>p.disc==="W")){
+    log(PNAME[G.current]+" replaced a wild with "+sw(p.replacedWith)+CMAP[p.replacedWith].name+".");
+  }
+  // depletion check
+  const dead = COLORS.filter(c=>G.supply[c.k]===0);
+  if(dead.length){
+    log(dead.map(c=>c.name).join(", ")+" supply depleted — game ends!","warn");
+    finishGame();
+    return;
+  }
+  G.current = opp;
+  G.turnNumber++;
+  G.phase = "select"; G.selection = []; G.placed = [];
+  takeSnapshot();
+  log("— "+PNAME[G.current]+"'s turn —","hl");
+  render();
+}
+
+function finishGame(){
+  G.phase = "over";
+  G.final = [Engine.scoreSide(G.cells[0]), Engine.scoreSide(G.cells[1])];
+  const [a,b] = [G.final[0].total, G.final[1].total];
+  let w;
+  if(a>b) w = PNAME[0]+" wins "+a+" – "+b+"!";
+  else if(b>a) w = PNAME[1]+" wins "+b+" – "+a+"!";
+  else w = "Tied "+a+" – "+a+" — "+PNAME[1]+" wins the tiebreak (second player).";
+  log(w,"hl");
+  render();
+}
+
+/* ---------- helpers ---------- */
+function sw(k){ return '<span class="sw" style="background:'+CMAP[k].hex+'"></span>'; }
+function log(html, cls){
+  const p = document.createElement("p");
+  if(cls) p.className = cls;
+  p.innerHTML = html;
+  document.getElementById("log").prepend(p);
+}
+
+/* ---------- SVG board rendering ---------- */
+const R = 21, HW = Math.sqrt(3)*R, VS = 1.5*R;
+const MAXW = 12*HW;
+const GAP = 4*R;   // center-to-center extra distance between the facing rows:
+                   // hexes are 2R tall, so this leaves a one-hex-tall (2R) empty band
+function hexPts(cx,cy){
+  const pts=[];
+  for(let a=0;a<6;a++){
+    const ang = Math.PI/180*(60*a-30);
+    pts.push((cx+R*Math.cos(ang)).toFixed(1)+","+(cy+R*Math.sin(ang)).toFixed(1));
+  }
+  return pts.join(" ");
+}
+function cellCenter(side, r, i){
+  const x = (MAXW/2) + (i - (Engine.width(r)-1)/2) * HW + 14;
+  const yTop = 26;
+  const boardH = (Engine.ROWS-1)*VS;
+  let y;
+  if(side === 0) y = yTop + r*VS;
+  else y = yTop + boardH + GAP + (boardH - r*VS);
+  return [x,y];
+}
+function renderBoard(){
+  const svg = document.getElementById("svg");
+  const boardH = (Engine.ROWS-1)*VS;
+  const totalH = 26 + boardH*2 + GAP + 30;
+  svg.setAttribute("viewBox", "0 0 "+(MAXW+28)+" "+totalH);
+  let s = "";
+  // divider glow centered in the gap
+  const midY = 26 + boardH + GAP/2;
+  s += '<rect x="0" y="'+(midY-6)+'" width="'+(MAXW+28)+'" height="12" rx="6" fill="'+T.divider+'" opacity="0.25"/>';
+  s += '<rect x="'+(MAXW/2-60+14)+'" y="'+(midY-3.5)+'" width="120" height="7" rx="3.5" fill="'+T.divider+'" opacity="0.6"/>';
+
+  const scored = scoredHighlight();
+  for(let side=0; side<2; side++){
+    for(let r=0;r<Engine.ROWS;r++){
+      for(let i=0;i<Engine.width(r);i++){
+        const key = r+","+i;
+        const [cx,cy] = cellCenter(side,r,i);
+        const disc = G.cells[side][key];
+        const legal = G.phase==="place" && isLegalCell(side,key);
+        const isGray = r===0;
+        let fill = disc ? T.filled : (isGray ? T.gray : T.empty);
+        let stroke = legal ? T.legal : T.stroke;
+        let swd = legal ? 2.5 : 1.2;
+        s += '<polygon points="'+hexPts(cx,cy)+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+swd+'"'+
+             ' data-side="'+side+'" data-key="'+key+'" style="cursor:'+(legal?"pointer":"default")+'"/>';
+        if(disc){
+          const hl = scored && scored.discs.has(side+":"+key);
+          s += '<circle cx="'+cx+'" cy="'+cy+'" r="'+(R*0.62)+'" fill="'+CMAP[disc].hex+'" stroke="'+(hl?T.path:T.discEdge)+'" stroke-width="'+(hl?3:1.5)+'" pointer-events="none"/>';
+          if(disc==="W") s += '<circle cx="'+cx+'" cy="'+cy+'" r="'+(R*0.3)+'" fill="none" stroke="#999" stroke-width="1.5" pointer-events="none"/>';
+        }
+      }
+    }
+    // labels
+    const themeVars = THEMES[themeIdx].vars;
+    const [lx,ly] = side===0 ? [14, 14] : [14, totalH-8];
+    s += '<text x="'+lx+'" y="'+ly+'" fill="'+(side===0?themeVars.p1:themeVars.p2)+'" font-size="13" font-weight="700">'+PNAME[side].toUpperCase()+(side===G.current&&G.phase!=="over"?"  ◄":"")+'</text>';
+  }
+  // chain path lines
+  if(scored){
+    for(const {side, path} of scored.paths){
+      let pts = path.map(k=>{
+        const [r,i]=k.split(",").map(Number);
+        const [x,y]=cellCenter(side,r,i);
+        return x+","+y;
+      }).join(" ");
+      s += '<polyline points="'+pts+'" fill="none" stroke="'+T.path+'" stroke-width="3.5" stroke-opacity="0.85" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>';
+    }
+  }
+  svg.innerHTML = s;
+  svg.onclick = (e)=>{
+    const t = e.target.closest("polygon[data-key]");
+    if(!t) return;
+    clickCell(+t.dataset.side, t.dataset.key);
+  };
+}
+function scoredHighlight(){
+  if(G.phase==="over" && G.final){
+    const discs=new Set(); const paths=[];
+    for(let side=0;side<2;side++){
+      for(const ch of G.final[side].chains){
+        ch.path.forEach(k=>discs.add(side+":"+k));
+        paths.push({side, path:ch.path, colorHex:CMAP[ch.color].hex});
+      }
+    }
+    return {discs, paths};
+  }
+  if(previewOn){
+    const discs=new Set(); const paths=[];
+    for(let side=0;side<2;side++){
+      const res = Engine.scoreSide(G.cells[side]);
+      for(const ch of res.chains){
+        ch.path.forEach(k=>discs.add(side+":"+k));
+        paths.push({side, path:ch.path, colorHex:CMAP[ch.color].hex});
+      }
+    }
+    return {discs, paths};
+  }
+  return null;
+}
+
+/* ---------- panel rendering ---------- */
+function render(){
+  renderBoard();
+  const turnShow = document.getElementById("turnShow");
+  const msg = document.getElementById("msg");
+  const pills = document.getElementById("statusPills");
+  const supplyCard = document.getElementById("supplyCard");
+  const replaceCard = document.getElementById("replaceCard");
+  const endBtn = document.getElementById("endTurnBtn");
+  const scoreCard = document.getElementById("scoreCard");
+
+  if(G.phase==="over"){
+    turnShow.innerHTML = "Game over";
+  } else {
+    turnShow.innerHTML = 'Turn '+G.turnNumber+' — <span class="'+PCLS[G.current]+'">'+PNAME[G.current]+'</span>';
+  }
+
+  if(G.phase==="select"){
+    msg.innerHTML = "Select <b>3 discs of different colors</b> from the supply. Wilds substitute for a color (and are the only way to take a blocked color).";
+  } else if(G.phase==="place"){
+    const own = 2-ownPlacedCount(), opp = 1-oppPlacedCount();
+    msg.innerHTML = "Place your discs: <b>"+own+"</b> left on your side, <b>"+opp+"</b> on the opponent's. "+
+      (grayHasSpace(G.current)||grayHasSpace(1-G.current) ? "Gray rows must fill first." : "Own-side discs must touch an existing disc.");
+  } else if(G.phase==="replace"){
+    msg.innerHTML = allWildsReplaced() ? "Ready — end the turn." : "Choose a replacement color for each wild you played.";
+  } else {
+    msg.innerHTML = "Final scoring below. Scored chains are outlined on the board.";
+  }
+
+  // pills
+  pills.innerHTML =
+    '<span class="pill">Blocked: <b>'+(G.blocked?CMAP[G.blocked].name:"none")+'</b></span>'+
+    '<span class="pill">P1 wilds: <b>'+G.wilds[0]+'</b>'+(G.wildLock[0]?" (locked)":"")+'</span>'+
+    '<span class="pill">P2 wilds: <b>'+G.wilds[1]+'</b>'+(G.wildLock[1]?" (locked)":"")+'</span>';
+
+  // supply
+  supplyCard.classList.toggle("hidden", G.phase!=="select");
+  if(G.phase==="select"){
+    const row = document.getElementById("supplyRow");
+    row.innerHTML = "";
+    for(const c of COLORS){
+      const b = document.createElement("button");
+      b.className = "chip"+(G.blocked===c.k?" blockedmark":"");
+      b.style.background = c.hex;
+      b.innerHTML = '<span class="ct">'+G.supply[c.k]+'</span>';
+      b.title = c.name + (G.blocked===c.k?" (blocked — wild only)":"");
+      b.disabled = G.blocked===c.k || G.supply[c.k]<=0 || G.selection.includes(c.k) || G.selection.length>=3;
+      b.onclick = ()=>clickSupply(c.k);
+      row.appendChild(b);
+    }
+    const wb = document.createElement("button");
+    wb.className = "chip";
+    wb.style.background = "#f2f2f2"; wb.style.color="#333";
+    wb.textContent = "W";
+    const wUsed = G.selection.filter(x=>x==="W").length;
+    wb.disabled = G.wildLock[G.current] || G.wilds[G.current]-wUsed<=0 || G.selection.length>=3;
+    wb.title = G.wildLock[G.current] ? "Wilds locked this turn (opponent played a wild on your side)" : "Wild disc";
+    const ct = document.createElement("span");
+    ct.className="ct"; ct.textContent = G.wilds[G.current]-wUsed;
+    wb.appendChild(ct);
+    wb.onclick = ()=>clickSupply("W");
+    row.appendChild(wb);
+
+    const tray = document.getElementById("selTray");
+    tray.innerHTML = G.selection.length ? "" : '<span style="color:var(--dim);font-size:12px;">nothing selected</span>';
+    G.selection.forEach((k,i)=>{
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.style.background = CMAP[k].hex;
+      if(k==="W"){ b.textContent="W"; b.style.color="#333"; }
+      b.title = "Click to remove";
+      b.onclick = ()=>unselect(i);
+      tray.appendChild(b);
+    });
+    document.getElementById("confirmSel").disabled = G.selection.length!==3;
+  }
+
+  // placement tray (reuse selection tray area? show remaining in msg; also show chips)
+  if(G.phase==="place"){
+    supplyCard.classList.remove("hidden");
+    document.getElementById("supplyRow").innerHTML = '<span style="color:var(--dim);font-size:12px;">— placement in progress —</span>';
+    const tray = document.getElementById("selTray");
+    tray.innerHTML = "";
+    G.selection.forEach((k,i)=>{
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.style.background = CMAP[k].hex;
+      if(k==="W"){ b.textContent="W"; b.style.color="#333"; }
+      if(i===activeDisc) b.style.outline = "3px solid var(--accent)";
+      b.title = "Place this disc next";
+      b.onclick = ()=>{ activeDisc=i; render(); };
+      tray.appendChild(b);
+    });
+    document.getElementById("confirmSel").disabled = true;
+  }
+
+  // replacement
+  const wilds = G.placed.filter(p=>p.disc==="W");
+  replaceCard.classList.toggle("hidden", !(G.phase==="replace" && wilds.length>0));
+  if(G.phase==="replace" && wilds.length){
+    const list = document.getElementById("repList");
+    list.innerHTML = "";
+    G.placed.forEach((p,pi)=>{
+      if(p.disc!=="W") return;
+      const div = document.createElement("div");
+      div.className="repitem";
+      div.innerHTML = '<span>Wild on '+(p.side===G.current?"your":"opponent's")+' side →</span>';
+      for(const c of COLORS){
+        const b = document.createElement("button");
+        b.className="chip";
+        b.style.background=c.hex;
+        b.disabled = G.supply[c.k]<=0 && p.replacedWith!==c.k;
+        if(p.replacedWith===c.k) b.style.outline="3px solid var(--accent)";
+        b.title=c.name+" ("+G.supply[c.k]+" left)";
+        b.onclick=()=>chooseReplacement(pi,c.k);
+        div.appendChild(b);
+      }
+      list.appendChild(div);
+    });
+  }
+
+  endBtn.classList.toggle("hidden", G.phase!=="replace");
+  endBtn.disabled = !allWildsReplaced();
+
+  // scoring card
+  scoreCard.classList.toggle("hidden", !(G.phase==="over" || previewOn));
+  if(G.phase==="over" || previewOn){
+    const res = G.phase==="over" ? G.final : [Engine.scoreSide(G.cells[0]), Engine.scoreSide(G.cells[1])];
+    let h = "";
+    for(let side=0;side<2;side++){
+      h += '<h3 style="color:'+(side===0?THEMES[themeIdx].vars.p1:THEMES[themeIdx].vars.p2)+'">'+PNAME[side]+' — '+res[side].total+' points</h3>';
+      if(!res[side].sets.length) h += '<div style="color:var(--dim)">No chains of 4+.</div>';
+      for(const st of res[side].sets){
+        const names = st.members.map(mi=>{
+          const ch = res[side].chains[mi];
+          return '<span style="color:'+CMAP[ch.color].hex+'">'+CMAP[ch.color].name+' '+ch.len+'</span>';
+        }).join(" + ");
+        if(st.k>=2) h += "<div>"+names+' = '+(st.len*st.k)+' <span class="mult">× '+st.k+' = '+st.points+'</span></div>';
+        else h += "<div>"+names+" = "+st.points+"</div>";
+      }
+    }
+    if(G.phase==="over"){
+      const [a,b]=[res[0].total,res[1].total];
+      h += '<div class="winner">'+(a>b?PNAME[0]+" wins!":b>a?PNAME[1]+" wins!":PNAME[1]+" wins the tie (went second).")+'</div>';
+    }
+    document.getElementById("breakdown").innerHTML = h;
+  }
+}
+
+/* ---------- wire up ---------- */
+if(typeof document !== "undefined" && document.getElementById("svg")){
+  const tsel = document.getElementById("themeSel");
+  THEMES.forEach((t,i)=>{
+    const o = document.createElement("option");
+    o.value = i; o.textContent = t.name;
+    tsel.appendChild(o);
+  });
+  tsel.onchange = ()=>applyTheme(+tsel.value);
+  document.getElementById("newGameBtn").onclick = newGame;
+  document.getElementById("resetTurn").onclick = resetTurn;
+  document.getElementById("confirmSel").onclick = confirmSelection;
+  document.getElementById("endTurnBtn").onclick = endTurn;
+  document.getElementById("previewScore").onclick = ()=>{ previewOn = !previewOn; render(); };
+  applyTheme(0);
+  newGame();
+}
+</script>
+</body>
+</html>
