@@ -112,12 +112,24 @@
 
     <div class="card">
       <div class="setrow">
+        <label>Rows
+          <select id="rowsSel">
+            <option value="6">6 (standard)</option>
+            <option value="5">5 (short)</option>
+            <option value="4">4 (tiny)</option>
+          </select>
+        </label>
+        <label>Width
+          <select id="colsSel">
+            <option value="7">7 (standard)</option>
+            <option value="6">6 (slim)</option>
+            <option value="5">5 (narrow)</option>
+          </select>
+        </label>
         <label>Supply/color
           <select id="supplySel">
-            <option value="20">20</option>
-            <option value="21">21</option><option value="22">22</option>
-            <option value="23">23</option><option value="24">24</option>
-            <option value="25">25</option>
+            <option value="20">20</option><option value="21">21</option>
+            <option value="22">22</option><option value="23">23</option>
           </select>
         </label>
         <label>Theme
@@ -152,12 +164,14 @@
    Cell key "r,i". Axial dirs for turn-constraint math.
 ===================================================================== */
 const Engine = (() => {
-  const ROWS = 6, BASE = 7;
-  const width = r => BASE + r;
-  const inBounds = (r,i) => r>=0 && r<ROWS && i>=0 && i<width(r);
+  const E = {};
+  E.ROWS = 6; E.BASE = 7;               // standard: rows 7,8,9,10,11,12
+  E.setSize = (rows, base) => { E.ROWS = rows; E.BASE = base; };
+  E.width = r => E.BASE + r;
+  E.inBounds = (r,i) => r>=0 && r<E.ROWS && i>=0 && i<E.width(r);
   // neighbor offsets with direction index in cyclic 60° order:
   // E=0, SE=1, SW=2, W=3, NW=4, NE=5
-  function nbrsWithDir(r,i){
+  E.nbrsWithDir = function(r,i){
     const out = [];
     const cand = [
       [r, i+1, 0],   // E
@@ -167,20 +181,20 @@ const Engine = (() => {
       [r-1, i-1, 4], // NW
       [r-1, i, 5],   // NE
     ];
-    for(const [rr,ii,d] of cand) if(inBounds(rr,ii)) out.push([rr+","+ii, d]);
+    for(const [rr,ii,d] of cand) if(E.inBounds(rr,ii)) out.push([rr+","+ii, d]);
     return out;
-  }
-  const turnOK = (a,b) => { const d=(b-a+6)%6; return d===0||d===1||d===5; };
+  };
+  E.turnOK = (a,b) => { const d=(b-a+6)%6; return d===0||d===1||d===5; };
 
   // longest turn-constrained simple path within a same-color component
-  function longestPath(compSet){
+  E.longestPath = function(compSet){
     let best = [];
     function dfs(key, visited, lastDir, path){
       if(path.length > best.length) best = path.slice();
       const [r,i] = key.split(",").map(Number);
-      for(const [nk, dir] of nbrsWithDir(r,i)){
+      for(const [nk, dir] of E.nbrsWithDir(r,i)){
         if(!compSet.has(nk) || visited.has(nk)) continue;
-        if(lastDir !== null && !turnOK(lastDir, dir)) continue;
+        if(lastDir !== null && !E.turnOK(lastDir, dir)) continue;
         visited.add(nk); path.push(nk);
         dfs(nk, visited, dir, path);
         visited.delete(nk); path.pop();
@@ -188,10 +202,10 @@ const Engine = (() => {
     }
     for(const k of compSet) dfs(k, new Set([k]), null, [k]);
     return best;
-  }
+  };
 
   // chains for one side: cells = { "r,i": colorKey }
-  function findChains(cells){
+  E.findChains = function(cells){
     const byColor = {};
     for(const [k,c] of Object.entries(cells)){
       if(!byColor[c]) byColor[c] = new Set();
@@ -207,19 +221,19 @@ const Engine = (() => {
         while(q.length){
           const cur = q.pop();
           const [r,i] = cur.split(",").map(Number);
-          for(const [nk] of nbrsWithDir(r,i)){
+          for(const [nk] of E.nbrsWithDir(r,i)){
             if(set.has(nk) && !seen.has(nk)){ seen.add(nk); comp.add(nk); q.push(nk); }
           }
         }
-        const path = longestPath(comp);
+        const path = E.longestPath(comp);
         if(path.length >= 4) chains.push({color, len:path.length, path});
       }
     }
     return chains;
-  }
+  };
 
   // optimal multiplier partition: per length, conjugate-partition the color counts
-  function partitionScore(chains){
+  E.partitionScore = function(chains){
     const byLen = {};
     chains.forEach((c,idx)=>{ (byLen[c.len] = byLen[c.len]||[]).push(idx); });
     let total = 0; const sets = [];
@@ -240,15 +254,15 @@ const Engine = (() => {
       }
     }
     return {total, sets};
-  }
+  };
 
-  function scoreSide(cells){
-    const chains = findChains(cells);
-    const {total, sets} = partitionScore(chains);
+  E.scoreSide = function(cells){
+    const chains = E.findChains(cells);
+    const {total, sets} = E.partitionScore(chains);
     return {chains, total, sets};
-  }
+  };
 
-  return { ROWS, BASE, width, inBounds, nbrsWithDir, turnOK, longestPath, findChains, partitionScore, scoreSide };
+  return E;
 })();
 
 /* ===================== GAME STATE & UI ===================== */
@@ -317,6 +331,9 @@ let G = null, snapshot = null, previewOn = false;
 
 function newGame(){
   const per = +document.getElementById("supplySel").value || SUPPLY_DEFAULT;
+  const rows = +document.getElementById("rowsSel").value || 6;
+  const base = +document.getElementById("colsSel").value || 7;
+  Engine.setSize(rows, base);
   G = {
     current: 0,
     supplyPer: per,
@@ -333,7 +350,8 @@ function newGame(){
   };
   previewOn = false;
   document.getElementById("log").innerHTML = "";
-  log("New game. "+PNAME[0]+" starts. Fill your gray row first.", "hl");
+  const hexes = Array.from({length:rows},(_,r)=>base+r).reduce((a,b)=>a+b,0);
+  log("New game — "+rows+" rows × base "+base+" ("+hexes+" hexes/side), "+per+" discs/color. "+PNAME[0]+" starts. Fill your gray row first.", "hl");
   takeSnapshot();
   render();
 }
@@ -438,6 +456,13 @@ function chooseReplacement(pIdx, colorK){
 function allWildsReplaced(){
   return G.placed.filter(p=>p.disc==="W").every(p=>p.replacedWith);
 }
+function emptyCount(side){
+  let n = 0;
+  for(let r=0;r<Engine.ROWS;r++)
+    for(let i=0;i<Engine.width(r);i++)
+      if(!G.cells[side][r+","+i]) n++;
+  return n;
+}
 function endTurn(){
   if(G.phase !== "replace" || !allWildsReplaced()) return;
   const opp = 1 - G.current;
@@ -464,6 +489,12 @@ function endTurn(){
   G.current = opp;
   G.turnNumber++;
   G.phase = "select"; G.selection = []; G.placed = [];
+  // board-full guard: the next player must be able to place 2 own + 1 opponent
+  if(emptyCount(G.current) < 2 || emptyCount(1-G.current) < 1){
+    log("Not enough open spaces for "+PNAME[G.current]+" to complete a turn — game ends.","warn");
+    finishGame();
+    return;
+  }
   takeSnapshot();
   log("— "+PNAME[G.current]+"'s turn —","hl");
   render();
@@ -492,9 +523,9 @@ function log(html, cls){
 
 /* ---------- SVG board rendering ---------- */
 const R = 21, HW = Math.sqrt(3)*R, VS = 1.5*R;
-const MAXW = 12*HW;
 const GAP = 4*R;   // center-to-center extra distance between the facing rows:
                    // hexes are 2R tall, so this leaves a one-hex-tall (2R) empty band
+function maxW(){ return (Engine.BASE + Engine.ROWS - 1) * HW; }
 function hexPts(cx,cy){
   const pts=[];
   for(let a=0;a<6;a++){
@@ -504,7 +535,7 @@ function hexPts(cx,cy){
   return pts.join(" ");
 }
 function cellCenter(side, r, i){
-  const x = (MAXW/2) + (i - (Engine.width(r)-1)/2) * HW + 14;
+  const x = (maxW()/2) + (i - (Engine.width(r)-1)/2) * HW + 14;
   const yTop = 26;
   const boardH = (Engine.ROWS-1)*VS;
   let y;
@@ -516,12 +547,12 @@ function renderBoard(){
   const svg = document.getElementById("svg");
   const boardH = (Engine.ROWS-1)*VS;
   const totalH = 26 + boardH*2 + GAP + 30;
-  svg.setAttribute("viewBox", "0 0 "+(MAXW+28)+" "+totalH);
+  svg.setAttribute("viewBox", "0 0 "+(maxW()+28)+" "+totalH);
   let s = "";
   // divider glow centered in the gap
   const midY = 26 + boardH + GAP/2;
-  s += '<rect x="0" y="'+(midY-6)+'" width="'+(MAXW+28)+'" height="12" rx="6" fill="'+T.divider+'" opacity="0.25"/>';
-  s += '<rect x="'+(MAXW/2-60+14)+'" y="'+(midY-3.5)+'" width="120" height="7" rx="3.5" fill="'+T.divider+'" opacity="0.6"/>';
+  s += '<rect x="0" y="'+(midY-6)+'" width="'+(maxW()+28)+'" height="12" rx="6" fill="'+T.divider+'" opacity="0.25"/>';
+  s += '<rect x="'+(maxW()/2-60+14)+'" y="'+(midY-3.5)+'" width="120" height="7" rx="3.5" fill="'+T.divider+'" opacity="0.6"/>';
 
   const scored = scoredHighlight();
   for(let side=0; side<2; side++){
